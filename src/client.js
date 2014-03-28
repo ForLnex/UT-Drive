@@ -1275,6 +1275,8 @@
         else
             content.append('<div class="empty">' + droppy.svg["upload-cloud"] + '<div class="text">Add files</div></div>');
         loadContent(view, content);
+
+        // -- Row events --
         // Upload button on empty page
         content.find(".empty").register("click", function (event) {
             var view = $(event.target).parents(".view"), fileInput = $("#file");
@@ -1290,42 +1292,54 @@
             var destination = $(this).data("id");
             updateLocation(view, destination);
         });
+        // Set initial sorting order
         content.find(".data-row").each(function (index) {
             this.setAttribute("order", index);
         });
-        content.find(".data-row .entry-menu").register("click", function (event) {
-            event.stopPropagation();
-            var entry = $(this).parent("li.data-row"),
-                type = entry.find(".sprite").attr("class"),
-                button = $(this);
+        // Entry menu
+        if (droppy.detects.mobile) {
+            content.find(".data-row").register("touchstart touchend touchmove touchcancel", function (event) {
+                console.log(event);
+            });
+        } else {
+            content.find(".data-row .entry-menu").register("click", showEntryMenu);
+        }
+        function showEntryMenu(event) {
+            var menu = $("#entry-menu"), entry, type, menuTop, menuMaxTop, rightAnchor;
 
-            type = type.match(/sprite\-(\w+)/);
+            if (event && event.type === "click") { // Regular click on desktops
+                entry = $(event.target).parent("li.data-row");
+                rightAnchor = $(event.target).offset().left + $(event.target).width();
+                event.stopPropagation();
+            } else { // Long tap on mobile
+                entry = $(event.target);
+            }
+
+            type = entry.find(".sprite").attr("class").match(/sprite\-(\w+)/);
             if (type) type = type[1];
 
             // Show a download entry when the click action is not download
             if (droppy.get("clickAction") !== "download" && entry.attr("data-type") === "file") {
                 type = "download";
-                $("#entry-menu").find(".download").attr("download", entry.children(".file-link").attr("download"));
-                $("#entry-menu").find(".download").attr("href", entry.children(".file-link").attr("href"));
+                menu.find(".download").attr("download", entry.children(".file-link").attr("download"));
+                menu.find(".download").attr("href", entry.children(".file-link").attr("href"));
             }
-
-            $("#entry-menu")
-                .attr("class", "in")
-                .css("left", (button.offset().left + button.width() - $("#entry-menu").width()) + "px")
-                .data("target", entry)
-                .addClass("type-" + type);
-
-            var menuMaxTop = $(document).height() - $("#entry-menu").height(),
-                menuTop = entry.offset().top;
+            menu.attr("class", "in");
+            menu.css("left", (rightAnchor - menu.width()) + "px");
+            menu.data("target", entry);
+            menu.addClass("type-" + type);
+            menuTop = entry.offset().top;
+            menuMaxTop = $(document).height() - menu.height();
             if (menuTop > menuMaxTop) menuTop = menuMaxTop;
-            $("#entry-menu").css("top", menuTop + "px");
+            menu.css("top", menuTop + "px");
             toggleCatcher();
 
             $("#click-catcher").one("mousemove", function () {
-                $("#entry-menu").attr("class", "out");
+                menu.attr("class", "out");
                 toggleCatcher();
             });
-        });
+        }
+
         // Paste a file/folder into a folder
         content.find(".paste-button").register("click", function (event) {
             event.stopPropagation();
