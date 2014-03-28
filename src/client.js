@@ -1298,21 +1298,34 @@
         });
         // Entry menu
         if (droppy.detects.mobile) {
-            content.find(".data-row").register("touchstart touchend touchmove touchcancel", function (event) {
-                console.log(event);
+            var timer, held = false;
+            content.find(".data-row").register("touchstart touchend", function (event) {
+                event.preventDefault();
+                if (event.type === "touchstart") {
+                    timer = setTimeout(function () {
+                        held = true;
+                        showEntryMenu(event);
+                    }, 1000);
+                } else if (event.type === "touchend") {
+                    if (!held) $(event.target).trigger("click");
+                }
             });
         } else {
             content.find(".data-row .entry-menu").register("click", showEntryMenu);
         }
         function showEntryMenu(event) {
-            var menu = $("#entry-menu"), entry, type, menuTop, menuMaxTop, rightAnchor;
+            var menu = $("#entry-menu"), entry, type, menuTop, menuMaxTop, left;
 
             if (event && event.type === "click") { // Regular click on desktops
-                entry = $(event.target).parent("li.data-row");
-                rightAnchor = $(event.target).offset().left + $(event.target).width();
+                entry = $(event.target).parents("li.data-row");
+                left = $(event.target).offset().left + $(event.target).width() - menu.width();
                 event.stopPropagation();
             } else { // Long tap on mobile
-                entry = $(event.target);
+                if ($(event.target).attr("class") === "data-row")
+                    entry = $(event.target);
+                else
+                    entry = $(event.target).parents(".data-row");
+                left = event.originalEvent.touches[0].clientX - menu.width() / 2;
             }
 
             type = entry.find(".sprite").attr("class").match(/sprite\-(\w+)/);
@@ -1325,7 +1338,7 @@
                 menu.find(".download").attr("href", entry.children(".file-link").attr("href"));
             }
             menu.attr("class", "in");
-            menu.css("left", (rightAnchor - menu.width()) + "px");
+            menu.css("left", left + "px");
             menu.data("target", entry);
             menu.addClass("type-" + type);
             menuTop = entry.offset().top;
