@@ -1298,17 +1298,40 @@
         });
         // Entry menu
         if (droppy.detects.mobile) {
-            var timer, held = false;
-            content.find(".data-row").register("touchstart touchend", function (event) {
-                event.preventDefault();
-                if (event.type === "touchstart") {
-                    timer = setTimeout(function () {
-                        held = true;
+            var timer, held, called, start = {};
+            content.children("ul").register("touchstart", function (event) {
+                start.x = event.originalEvent.touches[0].clientX;
+                start.y = event.originalEvent.touches[0].clientY;
+                held = true;
+                called = false;
+                timer = setTimeout(function () {
+                    event.preventDefault();
+                    if (held) {
+                        called = true;
                         showEntryMenu(event);
-                    }, 1000);
-                } else if (event.type === "touchend") {
-                    if (!held) $(event.target).trigger("click");
+                    }
+                }, 400);
+                setTimeout(function () {
+                    if (held && !$(event.target).parents(".data-row").hasClass("highlight"))
+                        $(event.target).parents(".data-row").addClass("highlight");
+                }, 100);
+            });
+            content.children("ul").register("touchmove", function (event) {
+                if (Math.abs(event.originalEvent.changedTouches[0].clientX - start.x) > 10 ||
+                    Math.abs(event.originalEvent.changedTouches[0].clientY - start.y) > 10) {
+                    $(event.target).parents(".data-row").removeClass("highlight");
+                    held = false;
+                    clearTimeout(timer);
                 }
+            });
+
+            content.children("ul").register("touchend", function (event) {
+                event.stopPropagation();
+                $(event.target).parents(".data-row").removeClass("highlight");
+                held = false;
+                event.preventDefault();
+                clearTimeout(timer);
+                if (!called) $(event.target).trigger("click");
             });
         } else {
             content.find(".data-row .entry-menu").register("click", showEntryMenu);
@@ -1347,8 +1370,9 @@
             menu.css("top", menuTop + "px");
             toggleCatcher();
 
-            $("#click-catcher").one("mousemove", function () {
+            $("#click-catcher").one("click", function () {
                 menu.attr("class", "out");
+                if (droppy.detects.mobile) $(".data-row").removeClass("highlight");
                 toggleCatcher();
             });
         }
