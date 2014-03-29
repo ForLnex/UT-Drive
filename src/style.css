@@ -693,6 +693,7 @@ input:-webkit-autofill {
     text-decoration: none;
     color: #333;
     display: block;
+    user-select: none;
 }
 
 #entry-menu svg {
