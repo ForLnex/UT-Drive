@@ -513,10 +513,6 @@ input:-webkit-autofill {
     width: 1.25em;
 }
 
-.mobile .data-row .entry-menu {
-    display: none;
-}
-
 /* Hide certain list elements when width gets too small */
 @media all and (max-width: 639px) { .view .entry-link, .view .inline-namer { padding: 0 .125em } }
 @media all and (max-width: 639px) { .view .header-mtime                    { display: none     } }

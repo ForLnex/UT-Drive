@@ -28,6 +28,7 @@
             return "ontouchstart" in document.documentElement;
         })()
     };
+
 // ============================================================================
 //  localStorage wrapper functions
 // ============================================================================
@@ -1296,7 +1297,7 @@
         content.find(".data-row").each(function (index) {
             this.setAttribute("order", index);
         });
-        // Entry menu
+        // Mobile Entry menu on long tap
         if (droppy.detects.mobile) {
             var timer, held, called, start = {};
             content.children("ul").register("touchstart", function (event) {
@@ -1310,7 +1311,7 @@
                         called = true;
                         showEntryMenu(event);
                     }
-                }, 400);
+                }, 350);
                 setTimeout(function () {
                     if (held && !$(event.target).parents(".data-row").hasClass("highlight"))
                         $(event.target).parents(".data-row").addClass("highlight");
@@ -1324,7 +1325,6 @@
                     clearTimeout(timer);
                 }
             });
-
             content.children("ul").register("touchend", function (event) {
                 event.stopPropagation();
                 $(event.target).parents(".data-row").removeClass("highlight");
@@ -1333,9 +1333,9 @@
                 clearTimeout(timer);
                 if (!called) $(event.target).trigger("click");
             });
-        } else {
-            content.find(".data-row .entry-menu").register("click", showEntryMenu);
         }
+        // Regular Entry menu
+        content.find(".data-row .entry-menu").register("click", showEntryMenu);
         function showEntryMenu(event) {
             var menu = $("#entry-menu"), entry, type, menuTop, menuMaxTop, left;
 
@@ -1370,7 +1370,7 @@
             menu.css("top", menuTop + "px");
             toggleCatcher();
 
-            $("#click-catcher").one("click", function () {
+            $("#click-catcher").one("mousemove", function () {
                 menu.attr("class", "out");
                 if (droppy.detects.mobile) $(".data-row").removeClass("highlight");
                 toggleCatcher();
