@@ -1097,7 +1097,7 @@
     function updateTitle(text, isPath) {
         var parts,
             prefix = "",
-            suffix = "droppy";
+            suffix = "UT Drive";
         if (isPath) {
             parts = text.match(/([^\/]+)/gm);
             prefix = parts ? parts[parts.length - 1] : "/";
