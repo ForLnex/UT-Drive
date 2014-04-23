@@ -748,6 +748,7 @@ droppy license below:
             }
         })(ws, data, 0);
     }
+
     //-----------------------------------------------------------------------------
     // Perform clipboard operation, copy/paste or cut/paste
     function doClipboard(type, from, to) {
@@ -779,6 +780,7 @@ droppy license below:
             log.error(error);
         }
     }
+
     //-----------------------------------------------------------------------------
     // Copy a file from one location to another quickly
     // snippet from: http://stackoverflow.com/a/14387791/2096729
