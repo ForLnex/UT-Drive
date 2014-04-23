@@ -430,7 +430,7 @@ droppy license below:
                 log.info(ws, null, "Unauthorized WebSocket connection closed.");
                 return;
             } else {
-                log.info(ws, null, "WebSocket [", chalk.green("connected"), "] ");
+                log.info(ws, null, prettyUser(cookie), "WebSocket [", chalk.green("connected"), "] ");
                 clients[cookie] = { views: [], ws: ws };
             }
             ws.on("message", function (message) {
@@ -452,7 +452,7 @@ droppy license below:
                 case "REQUEST_UPDATE":
                     if (!utils.isPathSane(msg.data)) return log.info(ws, null, "Invalid update request: " + msg.data);
                     if (!clients[cookie]) clients[cookie] = { views: [], ws: ws }; // This can happen when the server restarts
-                    readPath(msg.data, function (error, info) {
+                    readPath(addFilePath(userHome(cookie),msg.data), function (error, info) {
                         if (error) {
                             return log.info(ws, null, "Non-existing update request: " + msg.data);
                         } else if (info.type === "f") {
@@ -470,13 +470,13 @@ droppy license below:
                             clients[cookie].views[vId] = {};
                             clients[cookie].views[vId].file = null;
                             clients[cookie].views[vId].directory = msg.data;
-                            updateDirectory(clients[cookie].views[vId].directory, function (sizes) {
+                            updateDirectory(addFilePath(userHome(cookie),clients[cookie].views[vId].directory), clients[cookie].views[vId].directory, function (sizes) {
                                 sendFiles(cookie, vId, "UPDATE_DIRECTORY", sizes);
                             });
-                            updateWatchers(clients[cookie].views[vId].directory, function (success) {
+	                         updateWatchers(cookie, clients[cookie].views[vId].directory, function (success) {
                                 // Send client back to / in case the directory can't be read
                                 if (!success) {
-                                    updateDirectory("/", function (sizes) {
+                                    updateDirectory(addFilePath(userHome(cookie), "/"), "/", function (sizes) {
                                         sendFiles(cookie, vId, "UPDATE_DIRECTORY", sizes);
                                     });
                                 }
@@ -512,7 +512,7 @@ droppy license below:
                 case "DELETE_FILE":
                     log.info(ws, null, "Deleting: " + msg.data);
                     if (!utils.isPathSane(msg.data)) return log.info(ws, null, "Invalid file deletion request: " + msg.data);
-                    msg.data = addFilePath(msg.data);
+                    msg.data = addFilePath(userHome(cookie), msg.data);
                     fs.stat(msg.data, function (error, stats) {
                         if (error) {
                             log.error("Error getting stats to delete " + msg.data);
@@ -528,7 +528,7 @@ droppy license below:
                 case "SAVE_FILE":
                     log.info(ws, null, "Saving: " + msg.data.to);
                     if (!utils.isPathSane(msg.data.to)) return log.info(ws, null, "Invalid save request: " + msg.data);
-                    msg.data.to = addFilePath(msg.data.to);
+                    msg.data.to = addFilePath(userHome(cookie), msg.data.to);
                     fs.stat(msg.data.to, function (error) {
                         if (error && error.code !== "ENOENT") {
                             log.error("Error saving " + msg.data.to);
@@ -555,8 +555,8 @@ droppy license below:
                         send(clients[cookie].ws, JSON.stringify({ vId: vId, type: "ERROR", text: "Can't copy directory into itself."}));
                         return;
                     }
-                    msg.data.from = addFilePath(msg.data.from);
-                    msg.data.to = addFilePath(msg.data.to);
+                    msg.data.from = addFilePath(userHome(cookie), msg.data.from);
+                    msg.data.to = addFilePath(userHome(cookie), msg.data.to);
                     // In case source and destination are the same, append a number to the file/foldername
                     utils.getNewPath(msg.data.to, function (newPath) {
                         doClipboard(msg.data.type, msg.data.from, newPath);
@@ -564,7 +564,7 @@ droppy license below:
                     break;
                 case "CREATE_FOLDER":
                     if (!utils.isPathSane(msg.data)) return log.info(ws, null, "Invalid directory creation request: " + msg.data);
-                    mkdirp(addFilePath(msg.data), mode.dir, function (error) {
+                    mkdirp(addFilePath(userHome(cookie), msg.data), mode.dir, function (error) {
                         if (error) log.error(error);
                         log.info(ws, null, "Created: ", msg.data);
                     });
@@ -576,7 +576,7 @@ droppy license below:
                         send(clients[cookie].ws, JSON.stringify({ type: "ERROR", text: "Invalid rename request"}));
                         return;
                     }
-                    fs.rename(addFilePath(msg.data.old), addFilePath(msg.data.new), function (error) {
+                    fs.rename(addFilePath(userHome(cookie), msg.data.old), addFilePath(userHome(cookie),msg.data.new), function (error) {
                         if (error) log.error(error);
                         log.info(ws, null, "Renamed: ", msg.data.old, " -> ", msg.data.new);
                     });
@@ -613,9 +613,9 @@ droppy license below:
                     async.each(files,
                         function (file, callback) {
                             if (!utils.isPathSane(file)) callback(new Error("Invalid empty file creation request: " + file));
-                            mkdirp(path.dirname(addFilePath(file)), mode.dir, function (err) {
+                            mkdirp(path.dirname(addFilePath(userHome(cookie), file)), mode.dir, function (err) {
                                 if (err) callback(err);
-                                fs.writeFile(addFilePath(file), "", {mode: mode.file}, function () {
+                                fs.writeFile(addFilePath(userHome(cookie),file), "", {mode: mode.file}, function () {
                                     log.info(ws, null, "Created: " + file.substring(1));
                                     callback();
                                 });
@@ -631,7 +631,7 @@ droppy license below:
                     async.each(folders,
                         function (folder, callback) {
                             if (!utils.isPathSane(folder)) callback(new Error("Invalid empty file creation request: " + folder));
-                            mkdirp(addFilePath(folder), mode.dir, function (err) {
+                            mkdirp(addFilePath(userHome(cookie),folder), mode.dir, function (err) {
                                 callback(err);
                             });
                         }, function (err) {
@@ -659,6 +659,7 @@ droppy license below:
 
             ws.on("close", function (code) {
                 var reason;
+					 var user = prettyUser(cookie);
                 if (code === 4001) {
                     reason = "(Logged out)";
                     delete db.sessions[cookie];
@@ -667,7 +668,7 @@ droppy license below:
                     reason = "(Going away)";
                     delete clients[cookie];
                 }
-                log.info(ws, null, "WebSocket [", chalk.red("disconnected"), "] ", reason || "(Code: " + (code || "none")  + ")");
+                log.info(ws, null, user, "WebSocket [", chalk.red("disconnected"), "] ", reason || "(Code: " + (code || "none")  + ")");
             });
 
             ws.on("error", function (error) {
@@ -679,8 +680,8 @@ droppy license below:
     //-----------------------------------------------------------------------------
     // Send a file list update
     function sendFiles(cookie, vId, eventType, sizes) {
-        if (!clients[cookie].views[vId] || !clients[cookie] || !clients[cookie].ws || !clients[cookie].ws._socket) return;
-        var dir = clients[cookie].views[vId].directory,
+		 if (!clients[cookie].views[vId] || !clients[cookie] || !clients[cookie].ws || !clients[cookie].ws._socket){ return;}
+		 var dir = clients[cookie].views[vId].directory,
             data = {
                 vId    : vId,
                 type   : eventType,
@@ -821,9 +822,9 @@ droppy license below:
 
     //-----------------------------------------------------------------------------
     // Watch the directory for changes and send them to the appropriate clients.
-    function createWatcher(directory) {
+    function createWatcher(dirp, directory) {
         var watcher, clientsToUpdate, client,
-            dir = removeFilePath(directory);
+            dir = removeFilePath(dirp, directory);
         log.debug(chalk.green("Adding Watcher: ") + dir);
         watcher = fs.watch(directory, utils.throttle(function () {
             log.debug("Watcher detected update for ", chalk.blue(dir));
@@ -837,7 +838,7 @@ droppy license below:
                 });
             });
             if (clientsToUpdate.length > 0) {
-                updateDirectory(dir, function (sizes) {
+                updateDirectory(dirp, dir, function (sizes) {
                     clientsToUpdate.forEach(function (cl) {
                         sendFiles(cl.cookie, cl.vId, "UPDATE_DIRECTORY", sizes);
                     });
@@ -852,9 +853,9 @@ droppy license below:
 
     //-----------------------------------------------------------------------------
     // Watch given directory
-    function updateWatchers(newDir, callback) {
+    function updateWatchers(cookie, newDir, callback) {
         if (!watchers[newDir]) {
-            newDir = addFilePath(newDir);
+            newDir = addFilePath(userHome(cookie),newDir);
             fs.stat(newDir, function (error, stats) {
                 if (error || !stats) {
                     // Requested Directory can't be read
@@ -862,7 +863,7 @@ droppy license below:
                     if (callback) callback(false);
                 } else {
                     // Directory is okay to be read
-                    createWatcher(newDir);
+                    createWatcher(userHome(cookie), newDir);
                     checkWatchedDirs();
                     if (callback) callback(true);
                 }
@@ -871,7 +872,6 @@ droppy license below:
             if (callback) callback(true);
         }
     }
-
     //-----------------------------------------------------------------------------
     // Check if we need the other active watchers
     function checkWatchedDirs() {
@@ -936,12 +936,14 @@ droppy license below:
     //-----------------------------------------------------------------------------
     function handleGET(req, res) {
         var URI = decodeURIComponent(req.url),
-        isAuth = false;
+		  isAuth = false,
+		  cookie;
         req.time = Date.now();
 
         if (config.noLogin && !getCookie(req.headers.cookie))
             freeCookie(req, res);
-        if (getCookie(req.headers.cookie) || config.noLogin)
+		  cookie = getCookie(req.headers.cookie);
+        if (cookie || config.noLogin)
             isAuth = true;
 
         if (URI === "/" || URI === "//") {
@@ -984,7 +986,7 @@ droppy license below:
             }
 
             // Check if client is going to a path directly
-            fs.stat(path.join(config.filesDir, URI), function (error) {
+            fs.stat(path.join(userHome(cookie), URI), function (error) {
                 if (!error) {
                     handleResourceRequest(req, res, "base.html");
                 } else {
@@ -1128,13 +1130,13 @@ droppy license below:
     //-----------------------------------------------------------------------------
     function handleFileRequest(req, res, download) {
         var URI = decodeURIComponent(req.url).substring(3), shortLink, dispo, filepath;
-
+		  var cookie = getCookie(req.headers.cookie);
         // Check for a shortlink
         if (/^\/\$\//.test(req.url) && db.shortlinks[URI] && URI.length  === config.linkLength)
             shortLink = db.shortlinks[URI];
 
         // Validate the cookie for the remaining requests
-        if (!getCookie(req.headers.cookie) && !shortLink) {
+        if (!cookie && !shortLink) {
             res.statusCode = 301;
             res.setHeader("Location", "/");
             res.end();
@@ -1142,7 +1144,7 @@ droppy license below:
             return;
         }
 
-        filepath = shortLink ? addFilePath(shortLink) : addFilePath("/" + URI);
+        filepath = shortLink ? addFilePath(userHome(cookie), shortLink) : addFilePath(userHome(cookie), "/" + URI);
 
         if (filepath) {
             var mimeType = mime.lookup(filepath);
@@ -1188,12 +1190,11 @@ droppy license below:
             done = false,
             files = [],
             cookie = getCookie(req.headers.cookie),
-				user = getUser(cookie),
 				filesDir;
 
         req.query = qs.parse(req.url.substring("/upload?".length));
-        log.info(req, res, chalk.cyan("[User: " + user + "] "), "Upload started");
-		  filesDir = "/home/" + user + "/";
+        log.info(req, res, prettyUser(cookie), "Upload started");
+		  filesDir = userHome(cookie);
         // FEATURE: Check permissions
         if (!clients[cookie] && !config.noLogin) {
             res.statusCode = 500;
@@ -1215,7 +1216,7 @@ droppy license below:
                 dst = path.join(filesDir, req.query.to, dstRelative),
                 tmp = path.join(config.incomingDir, crypto.createHash("md5").update(String(dst)).digest("hex"));
 
-            log.info(req, res, "Receiving: " + dstRelative);
+            log.info(req, res, prettyUser(cookie), "Receiving: " + dstRelative);
             files[dstRelative] = {
                 src: tmp,
                 dst: decodeURIComponent(dst)
@@ -1266,7 +1267,7 @@ droppy license below:
         });
 
         req.on("close", function () {
-            if (!done) log.info(req, res, "Upload cancelled");
+            if (!done) log.info(req, res, prettyUser(cookie), "Upload cancelled");
             closeConnection();
         });
 
@@ -1285,7 +1286,7 @@ droppy license below:
     // Read a path, return type and info
     // @callback : function (error, info)
     function readPath(root, callback) {
-        fs.stat(addFilePath(root), function (error, stats) {
+        fs.stat(root, function (error, stats) {
             if (error) {
                 callback(error);
             } else if (stats.isFile()) {
@@ -1308,17 +1309,17 @@ droppy license below:
     }
     //-----------------------------------------------------------------------------
     // Update a directory's content
-    function updateDirectory(root, callback) {
-        fs.readdir(addFilePath(root), function (error, files) {
+    function updateDirectory(newRoot, root, callback) {
+		 fs.readdir(newRoot, function (error, files) {
             var dirContents = {}, fileNames;
             if (error) log.error(error);
             if (!files || files.length === 0) {
                 dirs[root] = dirContents;
                 callback();
-                return;
+					 return;
             }
             fileNames = files;
-            files = files.map(function (entry) { return root + "/" + entry; });
+            files = files.map(function (entry) { return newRoot + "/" + entry; });
             async.map(files, readPath, function (err, results) {
                 var i = fileNames.length;
                 while (i > -1) {
@@ -1337,7 +1338,7 @@ droppy license below:
     function generateDirSizes(root, dirContents, callback) {
         var tmpDirs = [];
         Object.keys(dirContents).forEach(function (dir) {
-            if (dirContents[dir].type === "d") tmpDirs.push(addFilePath(root + "/" + dir));
+            if (dirContents[dir].type === "d") tmpDirs.push(root + "/" + dir);
         });
         if (tmpDirs.length === 0) return;
 
@@ -1373,7 +1374,8 @@ droppy license below:
     //-----------------------------------------------------------------------------
     // Create a zip file from a directory and stream it to a client
     function streamArchive(req, res, type) {
-        var zipPath = addFilePath(decodeURIComponent(req.url.substring(4))), archive, dispo;
+		  var cookie = getCookie(req.headers.cookie);
+        var zipPath = addFilePath(userHome(cookie),decodeURIComponent(req.url.substring(4))), archive, dispo;
         fs.stat(zipPath, function (err, stats) {
             if (err) {
                 log.error(err);
@@ -1522,7 +1524,6 @@ droppy license below:
             for (var savedsession in db.sessions) {
                 if (savedsession === session) {
                     db.sessions[session].lastSeen = Date.now();
-                    log.simple(getUser(session));
 						  return session;
                 }
             }
@@ -1532,6 +1533,14 @@ droppy license below:
 
 	function getUser(session){
 		return db.sessions[session].username;
+	}
+
+	function prettyUser(session){
+		return chalk.cyan("[User: " + getUser(session) + "] "); 
+	}
+
+	function userHome(session){
+      return "/home/" + getUser(session) + "/";
 	}
 
     function freeCookie(req, res) {
@@ -1596,8 +1605,8 @@ droppy license below:
     function writeDB()         { fs.writeFileSync(config.db, JSON.stringify(db, null, 4)); }
     function getResPath(name)  { return path.join(config.resDir, name); }
     // removeFilePath is intentionally not an inverse to the add function
-    function addFilePath(p)    { return utils.fixPath(config.filesDir + p); }
-    function removeFilePath(p) { return utils.fixPath("/" + utils.fixPath(p).replace(utils.fixPath(config.filesDir), "")); }
+    function addFilePath(dir, p)    { return utils.fixPath(dir + p); }
+    function removeFilePath(dir, p) { return utils.fixPath("/" + utils.fixPath(p).replace(utils.fixPath(dir), "")); }
 
     //-----------------------------------------------------------------------------
     // Process signal and events
