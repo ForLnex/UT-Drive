@@ -1,7 +1,7 @@
 #UT-Drive
 A personal cloud storage solution built on top of Silverwind's droppy project, with a speedy HTML5 interface, running on [node.js](http://nodejs.org/).
 
-####Demos available: [Demo #1](drive.jbury.us)
+####Demos available: [Demo #1](drive.jbury.us) (Log in with test:test)
 
 ![Main View](http://i.imgur.com/izxnfAN.png)
 ![Editor](http://i.imgur.com/Ziv79rJ.png)
