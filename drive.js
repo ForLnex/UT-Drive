@@ -1,5 +1,12 @@
 #!/bin/env node
+
 /* ----------------------------------------------------------------------------
+							UT-Drive: A file server based on droppy
+ ------------------------------------------------------------------------------
+
+droppy license below:
+
+ ------------------------------------------------------------------------------
                           droppy - file server on node
                       https://github.com/silverwind/droppy
  ------------------------------------------------------------------------------
@@ -95,8 +102,8 @@
 						.replace(/\)/gm, chalk.cyan(")"))
 						.replace(/V/gm, chalk.yellow("V"))
     );
-    log.simple(chalk.blue("UT-Drive "), chalk.green(version), " running on ",
-               chalk.blue("node "), chalk.green(process.version.substring(1), "\n"));
+    log.simple(chalk.blue("UT-Drive "), " running on ",
+               chalk.blue("node "), chalk.green(version, "\n"));
 
     config = cfg(path.join(process.cwd(), "config.json"));
     log.init(config);
@@ -1034,7 +1041,7 @@
             req.on("end", function () {
                 var postData = qs.parse(body);
                 if (postData.username !== "" && postData.password !== "") {
-                    addOrUpdateUser(postData.username, postData.password, true);
+                    addOrUpdateUser(postData.username, postData.password, false);
                     createCookie(req, res, postData);
                     firstRun = false;
                     endReq(req, res, true);
@@ -1180,11 +1187,13 @@
         var busboy, opts,
             done = false,
             files = [],
-            cookie = getCookie(req.headers.cookie);
+            cookie = getCookie(req.headers.cookie),
+				user = getUser(cookie),
+				filesDir;
 
         req.query = qs.parse(req.url.substring("/upload?".length));
-        log.info(req, res, "Upload started");
-
+        log.info(req, res, chalk.cyan("[User: " + user + "] "), "Upload started");
+		  filesDir = "/home/" + user + "/";
         // FEATURE: Check permissions
         if (!clients[cookie] && !config.noLogin) {
             res.statusCode = 500;
@@ -1193,6 +1202,7 @@
             log.info(req, res);
             return;
         }
+		  
 
         opts = { headers: req.headers, fileHwm: 1024 * 1024, limits: {fieldNameSize: 255, fieldSize: 10 * 1024 * 1024}};
 
@@ -1202,7 +1212,7 @@
 
         busboy.on("file", function (fieldname, file, filename) {
             var dstRelative = filename ? decodeURIComponent(filename) : fieldname,
-                dst = path.join(config.filesDir, req.query.to, dstRelative),
+                dst = path.join(filesDir, req.query.to, dstRelative),
                 tmp = path.join(config.incomingDir, crypto.createHash("md5").update(String(dst)).digest("hex"));
 
             log.info(req, res, "Receiving: " + dstRelative);
@@ -1408,7 +1418,7 @@
             process.exit(0);
         } else if (option === "add" && args.length === 3) {
             readDB();
-            process.exit(addOrUpdateUser(args[1], args[2], true));
+            process.exit(addOrUpdateUser(args[1], args[2], false));
         } else if (option === "del" && args.length === 2) {
             readDB();
             process.exit(delUser(args[1]));
@@ -1512,12 +1522,17 @@
             for (var savedsession in db.sessions) {
                 if (savedsession === session) {
                     db.sessions[session].lastSeen = Date.now();
-                    return session;
+                    log.simple(getUser(session));
+						  return session;
                 }
             }
         }
         return false;
     }
+
+	function getUser(session){
+		return db.sessions[session].username;
+	}
 
     function freeCookie(req, res) {
         var dateString = new Date(Date.now() + 31536000000).toUTCString(),
