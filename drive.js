@@ -78,11 +78,6 @@
     if (isCLI) handleArguments();
 
     console.log([
-           /* "....__..............................\n",
-            ".--|  |----.-----.-----.-----.--.--.\n",
-            "|  _  |   _|  _  |  _  |  _  |  |  |\n",
-            "|_____|__| |_____|   __|   __|___  |\n",
-            ".................|__|..|__|..|_____|\n",*/
    	 " _    _ _______   _____       _           \n",
    	 "| |  | |__   __| |  __ \\     (_)          \n",
    	 "| |  | |  | |    | |  | |_ __ ___   _____ \n",
@@ -90,9 +85,15 @@
    	 "| |__| |  | |    | |__| | |  | |\\ V /  __/\n",
    	 " \\____/   |_|    |_____/|_|  |_| \\_/ \\___|\n",
         ].join("").replace(/\./gm, chalk.black("."))
-                  .replace(/\_/gm, chalk.magenta("_"))
-                  .replace(/\-/gm, chalk.magenta("-"))
-                  .replace(/\|/gm, chalk.magenta("|"))
+                  .replace(/\_/gm, chalk.yellow("_"))
+                  .replace(/\-/gm, chalk.yellow("-"))
+                  .replace(/\|/gm, chalk.cyan("|"))
+						.replace(/\\/gm, chalk.cyan("\\"))
+						.replace(/\//gm, chalk.cyan("/"))
+						.replace(/\'/gm, chalk.cyan("'"))
+						.replace(/\(/gm, chalk.cyan("("))
+						.replace(/\)/gm, chalk.cyan(")"))
+						.replace(/V/gm, chalk.yellow("V"))
     );
     log.simple(chalk.blue("UT-Drive "), chalk.green(version), " running on ",
                chalk.blue("node "), chalk.green(process.version.substring(1), "\n"));
