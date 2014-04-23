@@ -599,7 +599,7 @@ droppy license below:
                         sendUsers(cookie);
                     } else {
                         var isNew = !db.users[name];
-                        addOrUpdateUser(name, pass, false);
+                        addOrUpdateUser(name, pass);
                         if (isNew)
                             log.info(ws, null, "Added user: ", chalk.magenta(name));
                         else
@@ -1043,7 +1043,7 @@ droppy license below:
             req.on("end", function () {
                 var postData = qs.parse(body);
                 if (postData.username !== "" && postData.password !== "") {
-                    addOrUpdateUser(postData.username, postData.password, false);
+                    addOrUpdateUser(postData.username, postData.password);
                     createCookie(req, res, postData);
                     firstRun = false;
                     endReq(req, res, true);
@@ -1420,7 +1420,7 @@ droppy license below:
             process.exit(0);
         } else if (option === "add" && args.length === 3) {
             readDB();
-            process.exit(addOrUpdateUser(args[1], args[2], false));
+            process.exit(addOrUpdateUser(args[1], args[2]));
         } else if (option === "del" && args.length === 2) {
             readDB();
             process.exit(delUser(args[1]));
@@ -1471,12 +1471,12 @@ droppy license below:
 
     //-----------------------------------------------------------------------------
     // Add a user to the database
-    function addOrUpdateUser(user, password, privileged) {
+    function addOrUpdateUser(user, password) {
         var salt = crypto.randomBytes(4).toString("hex"),
             isNew = !db.users[user];
         db.users[user] = {
             hash: utils.getHash(password + salt + user) + "$" + salt,
-            privileged: privileged
+            privileged: false
         };
         writeDB();
         if (isCLI) log.simple(chalk.magenta(user), " successfully ", isNew ? "added." : "updated.");
