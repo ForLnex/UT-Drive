@@ -389,7 +389,7 @@ droppy license below:
     function onRequest(req, res) {
         if (!ready) {
             res.statusCode = 503;
-            res.end("Just a second! droppy is starting up...");
+            res.end("Just a second! UT-Drive is starting up...");
             return;
         }
         switch (req.method.toUpperCase()) {
