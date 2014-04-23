@@ -116,7 +116,6 @@
     // Prepare to get up and running
     cacheResources(config.resDir, function () {
         setupDirectories(function () {
-            cleanupLinks();
             ready = true;
             log.simple("Ready for requests!");
         });
@@ -266,50 +265,16 @@
     function setupDirectories(callback) {
         cleanupTemp(true, function () {
             try {
-                mkdirp.sync(config.filesDir, mode.dir);
                 mkdirp.sync(config.incomingDir, mode.dir);
             } catch (error) {
                 log.error("Unable to create directories:");
                 log.error(error);
                 process.exit(1);
             }
-
-            if (config.demoMode) {
-                cleanupForDemo(function schedule() {
-                    callback();
-                    setTimeout(cleanupForDemo, 60 * 60 * 1000, schedule);
-                });
-            } else {
-                callback();
-            }
-        });
-    }
-
-    //-----------------------------------------------------------------------------
-    // Restore the files directory to an initial state for the demo mode
-    function cleanupForDemo(callback) {
-        var oldWatched, currentWatched;
-        oldWatched = [];
-        currentWatched = Object.keys(watchers);
-        if (currentWatched.length > 0) {
-            oldWatched = currentWatched;
-            currentWatched.forEach(function (dir) {
-                watchers[dir].close();
-                delete watchers[dir];
-            });
-        }
-        log.simple("Cleaning up files and adding samples...");
-        cpr(__dirname, config.filesDir, {
-            deleteFirst: true,
-            overwrite: true,
-            filter: /(files|db\.json|config\.json|\.git|temp)/
-        }, function (err) {
-            if (err) log.error(err);
-            log.simple("Cleaning done.");
             callback();
         });
-
     }
+
     //-----------------------------------------------------------------------------
     // Clean up the directory for incoming files
     function cleanupTemp(initial, callback) {
@@ -321,26 +286,6 @@
                 process.exit(1);
             }
             callback();
-        });
-    }
-
-    //-----------------------------------------------------------------------------
-    // Clean up our shortened links by removing links to nonexistant files
-    function cleanupLinks() {
-        var linkcount = 0, cbcount = 0;
-        Object.keys(db.shortlinks).forEach(function (link) {
-            linkcount++;
-            (function (shortlink, location) {
-                fs.stat(path.join(config.filesDir, location), function (error, stats) {
-                    cbcount++;
-                    if (!stats || error) {
-                        delete db.shortlinks[shortlink];
-                    }
-                    if (cbcount === linkcount) {
-                        writeDB();
-                    }
-                });
-            })(link, db.shortlinks[link]);
         });
     }
 
@@ -493,7 +438,6 @@
                 case "REQUEST_SETTINGS":
                     send(clients[cookie].ws, JSON.stringify({ type : "SETTINGS", vId : vId, settings: {
                         debug: config.debug,
-                        demoMode: config.demoMode,
                         noLogin: config.noLogin,
                         maxFileSize: config.maxFileSize
                     }}));
@@ -1056,6 +1000,7 @@
                 res.statusCode = 401;
                 res.end();
                 log.info(req, res);
+					 console.log(req);
             }
             handleUploadRequest(req, res);
         } else if (URI === "/login") {
@@ -1585,18 +1530,10 @@
 
     function createCookie(req, res, postData) {
         var priv, dateString,
-            sessionID = crypto.randomBytes(32).toString("base64");
-
-        priv = db.users[postData.username].privileged;
-        if (postData.check === "on") {
-            // Create a semi-permanent cookie
-            dateString = new Date(Date.now() + 31536000000).toUTCString();
-            res.setHeader("Set-Cookie", cookieName + "=" + sessionID + ";expires=" + dateString + ";path=/");
-        } else {
-            // Create a single-session cookie
-            res.setHeader("Set-Cookie", cookieName + "=" + sessionID + ";path=/");
-        }
-        db.sessions[sessionID] = {privileged : priv, lastSeen : Date.now()};
+        sessionID = crypto.randomBytes(32).toString("base64");
+        // Create a single-session cookie
+        res.setHeader("Set-Cookie", cookieName + "=" + sessionID + ";path=/");
+        db.sessions[sessionID] = {username : postData.username, lastSeen : Date.now()};
         writeDB();
     }
 
