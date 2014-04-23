@@ -599,7 +599,7 @@ droppy license below:
                         sendUsers(cookie);
                     } else {
                         var isNew = !db.users[name];
-                        addOrUpdateUser(name, pass, msg.data.priv);
+                        addOrUpdateUser(name, pass, false);
                         if (isNew)
                             log.info(ws, null, "Added user: ", chalk.magenta(name));
                         else
@@ -1553,11 +1553,12 @@ droppy license below:
     }
 
     function createCookie(req, res, postData) {
-        var priv, dateString,
-        sessionID = crypto.randomBytes(32).toString("base64");
+        var priv = db.users[postData.username].privileged,
+			  	dateString,
+        		sessionID = crypto.randomBytes(32).toString("base64");
         // Create a single-session cookie
         res.setHeader("Set-Cookie", cookieName + "=" + sessionID + ";path=/");
-        db.sessions[sessionID] = {username : postData.username, lastSeen : Date.now()};
+        db.sessions[sessionID] = {username : postData.username, privileged : priv, lastSeen : Date.now()};
         writeDB();
     }
 
