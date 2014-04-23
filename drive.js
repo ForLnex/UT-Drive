@@ -102,8 +102,9 @@ droppy license below:
 						.replace(/\)/gm, chalk.cyan(")"))
 						.replace(/V/gm, chalk.yellow("V"))
     );
-    log.simple(chalk.blue("UT-Drive "), " running on ",
-               chalk.blue("node "), chalk.green(version, "\n"));
+    log.simple(chalk.blue("UT-Drive "), " built on ",
+               chalk.blue("droppy "), chalk.green(version),
+					" running on ", chalk.blue("node "), chalk.green(process.version.substring(1), "\n") );
 
     config = cfg(path.join(process.cwd(), "config.json"));
     log.init(config);
