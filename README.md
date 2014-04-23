@@ -1,7 +1,7 @@
-#droppy <a href="https://npmjs.org/package/droppy"><img src="https://badge.fury.io/js/droppy@2x.png" alt="NPM version" height="18"></a>
-A personal cloud storage solution with a speedy HTML5 interface, running on [node.js](http://nodejs.org/).
+#UT-Drive
+A personal cloud storage solution built on top of Silverwind's droppy project, with a speedy HTML5 interface, running on [node.js](http://nodejs.org/).
 
-####Demos available: [Demo #1](https://droppy-demo.herokuapp.com/#/) (Heroku) [Demo #2](http://droppy.jit.su/#/) (Nodejitsu).
+####Demos available: [Demo #1](drive.jbury.us)
 
 ![Main View](http://i.imgur.com/izxnfAN.png)
 ![Editor](http://i.imgur.com/Ziv79rJ.png)
@@ -20,21 +20,14 @@ A personal cloud storage solution with a speedy HTML5 interface, running on [nod
 * Support for shortened links to share file downloads with your friends without them needing to log in.
 
 ##Installation
-You can install droppy's self-contained directory from [npm](https://npmjs.org/package/droppy) like:
-````bash
-npm install droppy && mv node_modules/droppy . && rm -rf node_modules && cd droppy
-````
-Or get the latest development version through git:
-````bash
-git clone https://github.com/silverwind/droppy.git && cd droppy && npm install
-````
+Currently the only way to install UT-Drive is to clone the repo and run npm install.
 
 ##Running the server
-Inside droppy's directory run:
+Inside UT-Drives's directory run:
 ````bash
-node droppy
+sudo node drive
 ````
-By default, the server will listen on [port 8989](http://localhost:8989/). On first startup, you'll be prompted for a username and password for your first account. To list, add or remove accounts, either use the configuration dialog or see `node droppy help`.
+By default, the server will listen on [port 8989](http://localhost:8989/). On first startup, you'll be prompted for a username and password for your first account. To list, add or remove accounts, either use the configuration dialog or see `node drive help`.
 
 ##Configuration
 Configuration is done through `config.json`, which is created on the first run, with these defaults:
@@ -57,7 +50,6 @@ Configuration is done through `config.json`, which is created on the first run, 
     "demoMode"     : false,
     "timestamps"   : true,
     "db"           : "./db.json",
-    "filesDir"     : "./files/",
     "incomingDir"  : "./temp/incoming/",
     "resDir"       : "./res/",
     "srcDir"       : "./src/",
@@ -88,7 +80,6 @@ Configuration is done through `config.json`, which is created on the first run, 
 
 ###Path options
 - `db`: Location of the database file.
-- `filesDir`: The directory which serves as the server's root.
 - `incomingDir`: The directory for temporary files during uploads.
 - `resDir`: The directory which contains the compiled resources and images.
 - `srcDir`: The directory which contains the html/js/css sources.
@@ -107,26 +98,3 @@ These paths are passed directly to [node's tls](http://nodejs.org/api/tls.html#t
 - Internet Explorer 10 or higher (not regularly tested)
 
 In case of Firefox and Chrome older version may still work, but I'm not targeting CSS code at them.
-
-##Systemd
-If you'd like to run droppy as a systemd service, you can use this sample service file:
-
-````ini
-# systemd service file for droppy
-# replace /path/to/droppy with your actual path and User/Group with the intended user to run as
-[Unit]
-Description=droppy
-After=network.target
-
-[Service]
-ExecStart=/bin/env node /path/to/droppy/droppy.js --color
-WorkingDirectory=/path/to/droppy/
-Restart=always
-StandardOutput=syslog
-User=http
-Group=http
-SyslogIdentifier=droppy
-
-[Install]
-WantedBy=multi-user.target
-````
